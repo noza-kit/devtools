@@ -22,6 +22,10 @@ def todo_db_path() -> Path:
     return devtoolbox_home() / "todo.db"
 
 
+def experiments_db_path() -> Path:
+    return devtoolbox_home() / "experiments.db"
+
+
 def dotsync_home() -> Path:
     """Directory dotsync treats as $HOME. Overridable via DOTSYNC_HOME (used by tests)."""
     override = os.environ.get("DOTSYNC_HOME")

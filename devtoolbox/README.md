@@ -1,6 +1,6 @@
 # devtoolbox
 
-Personal CLI toolbox, packaged as a single pip-installable package with six
+Personal CLI toolbox, packaged as a single pip-installable package with seven
 tools:
 
 - **`projinit`** — scaffold a new project (`git init`, `.gitignore`, `README.md`, `LICENSE`)
@@ -9,6 +9,7 @@ tools:
 - **`dotsync`** — symlink dotfiles from a source repo into `$HOME`
 - **`doctor`** — dump a system/environment report (OS, CPU, memory, GPU, git, Python) for reproducibility notes
 - **`orgdir`** — sort a messy directory's files into subfolders by extension
+- **`explog`** — log experiment runs (params/results/tags) to SQLite from any script, and browse them from the CLI
 
 ## Install
 
@@ -28,9 +29,9 @@ with pip's `subdirectory` fragment:
 pip install "git+https://github.com/noza-kit/devtools.git#subdirectory=devtoolbox"
 ```
 
-After installing, the `projinit`, `snip`, `todo`, `dotsync`, `doctor`, and
-`orgdir` commands are available directly on your PATH. All support shell
-completion — run `<command> --install-completion` to enable it.
+After installing, the `projinit`, `snip`, `todo`, `dotsync`, `doctor`,
+`orgdir`, and `explog` commands are available directly on your PATH. All
+support shell completion — run `<command> --install-completion` to enable it.
 
 ## `projinit`
 
@@ -228,6 +229,44 @@ top-level files are touched — existing subdirectories (including folders
 has a same-named file, the incoming file is renamed `name (1).ext`,
 `name (2).ext`, etc. rather than overwriting it. Every real (non-dry-run)
 move is appended to `~/.devtools/orgdir.log`.
+
+## `explog`
+
+A generic experiment run logger backed by SQLite at
+`~/.devtools/experiments.db`. Not tied to machine learning — call it from any
+script to record a run's parameters, results, and tags:
+
+```python
+from devtoolbox.explog import log_run
+
+run_id = log_run(
+    params={"lr": 0.01, "epochs": 10},
+    results={"accuracy": 0.95, "loss": 0.12},
+    tags=["cnn", "baseline"],
+)
+```
+
+Each call stores the current UTC timestamp along with `params`/`results`
+(as JSON) and `tags`, and returns the new run's id. Values that aren't
+natively JSON-serializable (e.g. numpy scalars) are stored via `str()`
+rather than raising.
+
+Browse the history from the CLI:
+
+```bash
+# most recent runs first, as a table (default: 20)
+explog list
+explog list --limit 50
+explog list --tag cnn               # repeat --tag to require all of them
+
+# full params/results for one run
+explog show 1
+
+# export the full (optionally tag-filtered) history to CSV
+explog export --format csv
+explog export --format csv --output runs.csv
+explog export --format csv --tag baseline
+```
 
 ## Config
 

@@ -26,6 +26,7 @@ todo = "devtoolbox.todo.cli:app"
 dotsync = "devtoolbox.dotsync.cli:app"
 doctor = "devtoolbox.doctor.cli:app"
 orgdir = "devtoolbox.orgdir.cli:app"
+explog = "devtoolbox.explog.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
