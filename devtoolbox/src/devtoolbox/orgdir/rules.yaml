@@ -1,0 +1,21 @@
+categories:
+  images: [jpg, jpeg, png, gif, bmp, svg, webp, heic, tif, tiff]
+  documents: [pdf, doc, docx, txt, md, rtf, odt]
+  spreadsheets: [xlsx, xls, csv, ods]
+  presentations: [ppt, pptx, odp]
+  archives: [zip, rar, 7z, tar, gz, bz2, xz]
+  videos: [mp4, mov, avi, mkv, wmv, flv, webm]
+  audio: [mp3, wav, flac, aac, m4a, ogg]
+  code: [py, js, ts, java, c, cpp, h, go, rs, rb, php, sh]
+
+# Files whose extension isn't listed in any category above.
+default_category: others
+
+# Files with no extension at all. Defaults to default_category if omitted.
+no_extension_category: others
+
+# Filenames left untouched (exact match, case-sensitive).
+ignore:
+  - .DS_Store
+  - Thumbs.db
+  - desktop.ini

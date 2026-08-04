@@ -25,10 +25,16 @@ class DotsyncConfig:
 
 
 @dataclass
+class OrgdirConfig:
+    rules_file: str | None = None
+
+
+@dataclass
 class Config:
     projinit: ProjinitConfig = field(default_factory=ProjinitConfig)
     snip: SnipConfig = field(default_factory=SnipConfig)
     dotsync: DotsyncConfig = field(default_factory=DotsyncConfig)
+    orgdir: OrgdirConfig = field(default_factory=OrgdirConfig)
 
 
 def config_path():
@@ -44,9 +50,11 @@ def load_config() -> Config:
     projinit_raw = raw.get("projinit") or {}
     snip_raw = raw.get("snip") or {}
     dotsync_raw = raw.get("dotsync") or {}
+    orgdir_raw = raw.get("orgdir") or {}
 
     return Config(
         projinit=ProjinitConfig(**projinit_raw),
         snip=SnipConfig(**snip_raw),
         dotsync=DotsyncConfig(**dotsync_raw),
+        orgdir=OrgdirConfig(**orgdir_raw),
     )
