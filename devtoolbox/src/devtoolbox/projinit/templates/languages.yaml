@@ -1,0 +1,26 @@
+# Language/framework definitions for `projinit`.
+# Add a new entry here + a matching gitignore/<key>.gitignore file to
+# support a new language without touching any Python code.
+python:
+  display_name: Python
+  gitignore: python.gitignore
+  extra_files:
+    - path: requirements.txt
+      content: ""
+
+node:
+  display_name: Node.js
+  gitignore: node.gitignore
+  extra_files:
+    - path: package.json
+      content: |
+        {
+          "name": "{{ project_name }}",
+          "version": "0.1.0",
+          "description": "{{ description }}"
+        }
+
+generic:
+  display_name: Other / Generic
+  gitignore: generic.gitignore
+  extra_files: []
