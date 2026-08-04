@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="wikigen-page">
+  <h1>Tags</h1>
+  {% if tags %}
+  <ul class="wikigen-tag-list">
+    {% for tag in tags %}
+    <li><a href="{{ root_prefix }}tags/{{ tag.slug }}.html">{{ tag.name }}</a> <span class="wikigen-tag-count">({{ tag.count }})</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No tags yet.</p>
+  {% endif %}
+</article>
+{% endblock %}

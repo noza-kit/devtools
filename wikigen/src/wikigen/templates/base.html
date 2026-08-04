@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site_title }}</title>
+<link rel="stylesheet" href="{{ root_prefix }}assets/style.css">
+</head>
+<body data-root-prefix="{{ root_prefix }}">
+<div class="wikigen-layout">
+  <aside class="wikigen-sidebar">
+    <div class="wikigen-sidebar-header">
+      <a href="{{ root_prefix }}index.html" class="wikigen-site-title">{{ site_title }}</a>
+    </div>
+    <div class="wikigen-search">
+      <input id="wikigen-search-input" type="text" placeholder="Search..." autocomplete="off">
+      <ul id="wikigen-search-results" class="wikigen-search-results"></ul>
+    </div>
+    <nav class="wikigen-tree">
+      {{ tree_html | safe }}
+    </nav>
+    <div class="wikigen-sidebar-footer">
+      <a href="{{ root_prefix }}tags/index.html">Tags</a>
+    </div>
+  </aside>
+  <main class="wikigen-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{{ root_prefix }}assets/search-index.js"></script>
+<script src="{{ root_prefix }}assets/search.js"></script>
+</body>
+</html>
