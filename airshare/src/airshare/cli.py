@@ -14,7 +14,7 @@ import typer
 import uvicorn
 
 from airshare.config import load_settings
-from airshare.network import get_local_ip
+from airshare.network import get_local_ip, is_port_free
 from airshare.qr import render_ascii
 from airshare.runtime import RuntimeInfo, clear_runtime_info, generate_token, read_runtime_info, write_runtime_info
 from airshare.server import create_app
@@ -46,6 +46,14 @@ def start(
     existing = read_runtime_info(settings)
     if existing is not None and _is_alive(existing):
         typer.secho(f"AirShare is already running on port {existing.port}. Run 'airshare stop' first.", fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    if not is_port_free(settings.host, settings.port):
+        typer.secho(
+            f"ポート {settings.port} は他のアプリケーションが使用中です。"
+            " '--port' で別の番号を指定するか、$AIRSHARE_PORT を変更してください。",
+            fg=typer.colors.RED,
+        )
         raise typer.Exit(code=1)
 
     token = generate_token()
