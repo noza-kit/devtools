@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>AirShare</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>AirShare</h1>
+</header>
+
+<main>
+  <section class="card" id="drop-zone">
+    <p class="hint">タップしてファイルを選択、またはドラッグ&amp;ドロップ</p>
+    <input type="file" id="file-input" multiple hidden>
+    <button type="button" class="big-button" id="pick-button">ファイルを選ぶ</button>
+    <p class="status" id="upload-status" aria-live="polite"></p>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>PCから受け取る</h2>
+      <button type="button" class="icon-button" id="refresh-button" aria-label="更新">&#8635;</button>
+    </div>
+    <ul id="file-list" class="file-list">
+      <li class="empty">読み込み中...</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+  window.AIRSHARE_CODE = {{ code | tojson }};
+</script>
+<script src="/static/app.js"></script>
+</body>
+</html>

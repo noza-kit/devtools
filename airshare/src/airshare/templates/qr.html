@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AirShare - QRコード</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>AirShare</h1>
+</header>
+<main>
+  <section class="card qr-card">
+    <p class="hint">iPhoneのカメラでスキャンしてください</p>
+    <img src="{{ qr_data_uri }}" alt="QR code" class="qr-image">
+    <p class="url-text">{{ url }}</p>
+    {% if passcode %}<p class="hint">パスコード: <strong>{{ passcode }}</strong></p>{% endif %}
+  </section>
+</main>
+</body>
+</html>
