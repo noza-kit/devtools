@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="wikigen-page">
+  <h1>{{ page_title }}</h1>
+  {% if tags %}
+  <div class="wikigen-tags">
+    {% for tag in tags %}<a class="wikigen-tag" href="{{ root_prefix }}tags/{{ tag.slug }}.html">#{{ tag.name }}</a>{% endfor %}
+  </div>
+  {% endif %}
+  <div class="wikigen-body">
+    {{ body_html | safe }}
+  </div>
+</article>
+{% endblock %}

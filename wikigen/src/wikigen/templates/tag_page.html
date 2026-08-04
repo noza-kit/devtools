@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="wikigen-page">
+  <h1>#{{ tag_name }}</h1>
+  <ul class="wikigen-page-list">
+    {% for p in pages %}
+    <li><a href="{{ root_prefix }}{{ p.url }}">{{ p.title }}</a></li>
+    {% endfor %}
+  </ul>
+</article>
+{% endblock %}
