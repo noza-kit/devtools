@@ -26,3 +26,7 @@ def dotsync_home() -> Path:
     """Directory dotsync treats as $HOME. Overridable via DOTSYNC_HOME (used by tests)."""
     override = os.environ.get("DOTSYNC_HOME")
     return Path(override) if override else Path.home()
+
+
+def orgdir_log_path() -> Path:
+    return devtoolbox_home() / "orgdir.log"

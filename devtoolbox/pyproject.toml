@@ -25,9 +25,11 @@ snip = "devtoolbox.snip.cli:app"
 todo = "devtoolbox.todo.cli:app"
 dotsync = "devtoolbox.dotsync.cli:app"
 doctor = "devtoolbox.doctor.cli:app"
+orgdir = "devtoolbox.orgdir.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 "devtoolbox.projinit" = ["templates/**/*"]
+"devtoolbox.orgdir" = ["rules.yaml"]

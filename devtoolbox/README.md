@@ -1,6 +1,6 @@
 # devtoolbox
 
-Personal CLI toolbox, packaged as a single pip-installable package with five
+Personal CLI toolbox, packaged as a single pip-installable package with six
 tools:
 
 - **`projinit`** — scaffold a new project (`git init`, `.gitignore`, `README.md`, `LICENSE`)
@@ -8,6 +8,7 @@ tools:
 - **`todo`** — a personal task list
 - **`dotsync`** — symlink dotfiles from a source repo into `$HOME`
 - **`doctor`** — dump a system/environment report (OS, CPU, memory, GPU, git, Python) for reproducibility notes
+- **`orgdir`** — sort a messy directory's files into subfolders by extension
 
 ## Install
 
@@ -27,9 +28,9 @@ with pip's `subdirectory` fragment:
 pip install "git+https://github.com/noza-kit/devtools.git#subdirectory=devtoolbox"
 ```
 
-After installing, the `projinit`, `snip`, `todo`, `dotsync`, and `doctor`
-commands are available directly on your PATH. All support shell completion —
-run `<command> --install-completion` to enable it.
+After installing, the `projinit`, `snip`, `todo`, `dotsync`, `doctor`, and
+`orgdir` commands are available directly on your PATH. All support shell
+completion — run `<command> --install-completion` to enable it.
 
 ## `projinit`
 
@@ -189,9 +190,48 @@ GPU detection tries `nvidia-smi` first, then falls back to a platform tool
 `system_profiler` on macOS). If none are available, the GPU section is
 reported empty rather than failing the command.
 
+## `orgdir`
+
+Sorts every file directly inside a target directory into extension-based
+subfolders (`images/`, `documents/`, `archives/`, `videos/`, ...). The
+extension → folder mapping comes from a YAML rules file — the bundled
+default (`src/devtoolbox/orgdir/rules.yaml`), a one-off file passed via
+`--config`, or `orgdir.rules_file` in the config (see below).
+
+```bash
+orgdir ~/Downloads --dry-run       # preview what would move, without touching anything
+orgdir ~/Downloads                 # actually move the files
+orgdir ~/Downloads --config my-rules.yaml
+```
+
+Rules file format:
+
+```yaml
+categories:
+  images: [jpg, jpeg, png, gif, bmp, svg, webp]
+  documents: [pdf, doc, docx, txt, md]
+  archives: [zip, rar, 7z, tar, gz]
+  videos: [mp4, mov, avi, mkv]
+
+default_category: others          # extensions not listed above
+no_extension_category: others     # files with no extension (defaults to default_category)
+
+ignore:                           # filenames left in place (exact match)
+  - .DS_Store
+  - Thumbs.db
+```
+
+Extensions are matched case-insensitively, without a leading dot. Only
+top-level files are touched — existing subdirectories (including folders
+`orgdir` created on a previous run) are left alone, which makes re-running
+`orgdir` on an already-sorted directory a no-op. If the destination already
+has a same-named file, the incoming file is renamed `name (1).ext`,
+`name (2).ext`, etc. rather than overwriting it. Every real (non-dry-run)
+move is appended to `~/.devtools/orgdir.log`.
+
 ## Config
 
-`projinit`, `snip`, and `dotsync` read optional defaults from
+`projinit`, `snip`, `dotsync`, and `orgdir` read optional defaults from
 `~/.devtools/config.yaml` (the directory can be relocated via the
 `DEVTOOLBOX_HOME` env var, mainly used by the test suite):
 
@@ -206,6 +246,9 @@ snip:
 
 dotsync:
   source_dir: ~/my-dotfiles
+
+orgdir:
+  rules_file: ~/my-orgdir-rules.yaml
 ```
 
 - `projinit.default_lang` / `default_license` / `default_author` are used
@@ -213,6 +256,8 @@ dotsync:
 - `snip.default_tags` are merged into every `snip add` call automatically.
 - `dotsync.source_dir` overrides the default `~/dotfiles` source directory
   whenever `--source` is omitted.
+- `orgdir.rules_file` overrides the bundled default rules file whenever
+  `--config` is omitted.
 
 ## Development
 
