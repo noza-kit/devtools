@@ -4,6 +4,7 @@
 python:
   display_name: Python
   gitignore: python.gitignore
+  init_command: ["python", "-m", "venv", ".venv"]
   extra_files:
     - path: requirements.txt
       content: ""
@@ -11,6 +12,7 @@ python:
 node:
   display_name: Node.js
   gitignore: node.gitignore
+  init_command: ["npm", "init", "-y"]
   extra_files:
     - path: package.json
       content: |

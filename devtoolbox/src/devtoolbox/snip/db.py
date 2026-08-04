@@ -90,12 +90,20 @@ def get_snippet(conn: sqlite3.Connection, name: str) -> Snippet | None:
     return _row_to_snippet(row) if row else None
 
 
-def list_snippets(conn: sqlite3.Connection, tag: str | None = None) -> list[Snippet]:
+def list_snippets(conn: sqlite3.Connection, tags: list[str] | None = None) -> list[Snippet]:
     rows = conn.execute("SELECT * FROM snippets ORDER BY name").fetchall()
     snippets = [_row_to_snippet(row) for row in rows]
-    if tag:
-        snippets = [s for s in snippets if tag in s.tags]
+    if tags:
+        snippets = [s for s in snippets if all(t in s.tags for t in tags)]
     return snippets
+
+
+def all_tags(conn: sqlite3.Connection) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for snippet in list_snippets(conn):
+        for tag in snippet.tags:
+            counts[tag] = counts.get(tag, 0) + 1
+    return counts
 
 
 def search_snippets(conn: sqlite3.Connection, keyword: str) -> list[Snippet]:

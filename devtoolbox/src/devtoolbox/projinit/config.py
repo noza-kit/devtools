@@ -9,6 +9,12 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 LANGUAGES_FILE = TEMPLATES_DIR / "languages.yaml"
 GITIGNORE_DIR = TEMPLATES_DIR / "gitignore"
 README_TEMPLATE = TEMPLATES_DIR / "readme" / "README.md.j2"
+LICENSE_DIR = TEMPLATES_DIR / "license"
+
+LICENSES = {
+    "mit": "MIT.txt",
+    "apache-2.0": "Apache-2.0.txt",
+}
 
 
 @dataclass
@@ -23,6 +29,7 @@ class LanguageConfig:
     display_name: str
     gitignore: str
     extra_files: list[ExtraFile] = field(default_factory=list)
+    init_command: list[str] | None = None
 
     @property
     def gitignore_path(self) -> Path:
@@ -30,6 +37,10 @@ class LanguageConfig:
 
 
 class UnknownLanguageError(ValueError):
+    pass
+
+
+class UnknownLicenseError(ValueError):
     pass
 
 
@@ -43,6 +54,7 @@ def load_languages() -> dict[str, LanguageConfig]:
             display_name=entry["display_name"],
             gitignore=entry["gitignore"],
             extra_files=extra_files,
+            init_command=entry.get("init_command"),
         )
     return languages
 
@@ -56,3 +68,14 @@ def get_language(key: str) -> LanguageConfig:
         raise UnknownLanguageError(
             f"Unknown language '{key}'. Available: {available}"
         ) from exc
+
+
+def get_license_template(key: str) -> Path:
+    try:
+        filename = LICENSES[key]
+    except KeyError as exc:
+        available = ", ".join(sorted(LICENSES))
+        raise UnknownLicenseError(
+            f"Unknown license '{key}'. Available: {available}"
+        ) from exc
+    return LICENSE_DIR / filename

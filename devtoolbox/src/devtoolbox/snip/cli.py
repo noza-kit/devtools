@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+import json
+import os
+import subprocess
 import sys
-from typing import Optional
+import tempfile
+from pathlib import Path
+from typing import List, Optional
 
 import typer
 
+from devtoolbox.common.config import load_config
 from devtoolbox.common.paths import snippets_db_path
 from devtoolbox.snip.clipboard import ClipboardUnavailableError, read_clipboard, write_clipboard
 from devtoolbox.snip.db import (
     SnippetExistsError,
     SnippetNotFoundError,
     add_snippet,
+    all_tags,
     get_connection,
     get_snippet,
     list_snippets,
@@ -18,11 +25,20 @@ from devtoolbox.snip.db import (
     search_snippets,
 )
 
-app = typer.Typer(help="Personal snippet manager", add_completion=False)
+app = typer.Typer(help="Personal snippet manager", add_completion=True)
 
 
 def _parse_tags(tags: str) -> list[str]:
     return [t.strip() for t in tags.split(",") if t.strip()]
+
+
+def _merge_with_default_tags(tags: list[str]) -> list[str]:
+    config = load_config()
+    merged = list(tags)
+    for tag in config.snip.default_tags:
+        if tag not in merged:
+            merged.append(tag)
+    return merged
 
 
 def _format_line(name: str, tags: list[str]) -> str:
@@ -54,9 +70,11 @@ def add(
         typer.secho("Nothing to save: content is empty", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
+    tag_list = _merge_with_default_tags(_parse_tags(tags))
+
     conn = get_connection(snippets_db_path())
     try:
-        add_snippet(conn, name, content, _parse_tags(tags), overwrite=overwrite)
+        add_snippet(conn, name, content, tag_list, overwrite=overwrite)
     except SnippetExistsError as exc:
         typer.secho(f"{exc} (use --overwrite to replace)", fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -66,14 +84,59 @@ def add(
     typer.secho(f"Saved snippet '{name}'", fg=typer.colors.GREEN)
 
 
+@app.command()
+def edit(
+    name: str = typer.Argument(..., help="Snippet name"),
+    tags: Optional[str] = typer.Option(
+        None, "--tags", "-t", help="Replace tags (comma separated). Omit to keep existing tags."
+    ),
+) -> None:
+    """Open a snippet in $EDITOR (or $VISUAL) and save the changes."""
+    conn = get_connection(snippets_db_path())
+    try:
+        snippet = get_snippet(conn, name)
+        if snippet is None:
+            typer.secho(f"Snippet '{name}' not found", fg=typer.colors.RED)
+            raise typer.Exit(code=1)
+
+        editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+        if not editor:
+            editor = "notepad" if os.name == "nt" else "vi"
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as tmp:
+            tmp.write(snippet.content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            subprocess.run([editor, str(tmp_path)], check=True)
+            new_content = tmp_path.read_text(encoding="utf-8").rstrip("\n")
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        if not new_content:
+            typer.secho("Aborted: edited content is empty", fg=typer.colors.RED)
+            raise typer.Exit(code=1)
+
+        new_tags = _parse_tags(tags) if tags is not None else snippet.tags
+        add_snippet(conn, name, new_content, new_tags, overwrite=True)
+    finally:
+        conn.close()
+
+    typer.secho(f"Updated snippet '{name}'", fg=typer.colors.GREEN)
+
+
 @app.command(name="list")
 def list_cmd(
-    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+    tag: List[str] = typer.Option(
+        [], "--tag", "-t", help="Filter by tag (repeatable; a snippet must have all given tags)"
+    ),
 ) -> None:
     """List saved snippets, optionally filtered by tag."""
     conn = get_connection(snippets_db_path())
     try:
-        snippets = list_snippets(conn, tag=tag)
+        snippets = list_snippets(conn, tags=tag or None)
     finally:
         conn.close()
 
@@ -83,6 +146,23 @@ def list_cmd(
 
     for s in snippets:
         typer.echo(_format_line(s.name, s.tags))
+
+
+@app.command()
+def tags() -> None:
+    """List all tags currently in use, with snippet counts."""
+    conn = get_connection(snippets_db_path())
+    try:
+        counts = all_tags(conn)
+    finally:
+        conn.close()
+
+    if not counts:
+        typer.echo("No tags found.")
+        return
+
+    for tag_name, count in sorted(counts.items()):
+        typer.echo(f"{tag_name} ({count})")
 
 
 @app.command()
@@ -148,6 +228,67 @@ def rm(
         conn.close()
 
     typer.secho(f"Removed snippet '{name}'", fg=typer.colors.GREEN)
+
+
+@app.command()
+def export(
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o", help="Output file (default: print to stdout)"
+    ),
+) -> None:
+    """Export all snippets as JSON."""
+    conn = get_connection(snippets_db_path())
+    try:
+        snippets = list_snippets(conn)
+    finally:
+        conn.close()
+
+    data = [
+        {
+            "name": s.name,
+            "content": s.content,
+            "tags": s.tags,
+            "created_at": s.created_at,
+            "updated_at": s.updated_at,
+        }
+        for s in snippets
+    ]
+    text = json.dumps(data, ensure_ascii=False, indent=2)
+
+    if output is not None:
+        output.write_text(text, encoding="utf-8")
+        typer.secho(f"Exported {len(data)} snippet(s) to {output}", fg=typer.colors.GREEN)
+    else:
+        typer.echo(text)
+
+
+@app.command(name="import")
+def import_cmd(
+    input_file: Path = typer.Argument(..., help="JSON file previously produced by `snip export`"),
+    overwrite: bool = typer.Option(
+        False, "--overwrite", "-f", help="Overwrite existing snippets with the same name"
+    ),
+) -> None:
+    """Import snippets from a JSON file produced by `snip export`."""
+    data = json.loads(input_file.read_text(encoding="utf-8"))
+
+    conn = get_connection(snippets_db_path())
+    imported = 0
+    skipped = 0
+    try:
+        for entry in data:
+            existing = get_snippet(conn, entry["name"])
+            if existing is not None and not overwrite:
+                skipped += 1
+                continue
+            add_snippet(
+                conn, entry["name"], entry["content"], entry.get("tags", []), overwrite=True
+            )
+            imported += 1
+    finally:
+        conn.close()
+
+    typer.secho(f"Imported {imported} snippet(s), skipped {skipped}", fg=typer.colors.GREEN)
 
 
 if __name__ == "__main__":

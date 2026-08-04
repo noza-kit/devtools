@@ -3,7 +3,7 @@
 Personal CLI toolbox, packaged as a single pip-installable package with two
 tools:
 
-- **`projinit`** — scaffold a new project (`git init`, `.gitignore`, `README.md`)
+- **`projinit`** — scaffold a new project (`git init`, `.gitignore`, `README.md`, `LICENSE`)
 - **`snip`** — save, search, and recall code snippets from the terminal
 
 ## Install
@@ -25,16 +25,18 @@ pip install "git+https://github.com/noza-kit/devtools.git#subdirectory=devtoolbo
 ```
 
 After installing, the `projinit` and `snip` commands are available directly
-on your PATH.
+on your PATH. Both support shell completion — run `projinit --install-completion`
+or `snip --install-completion` to enable it.
 
 ## `projinit`
 
 Scaffold a new project directory with `git init`, a language-appropriate
-`.gitignore`, and a `README.md`.
+`.gitignore`, a `README.md`, an optional `LICENSE`, and the language's init
+command (`python -m venv .venv`, `npm init -y`, ...).
 
 ```bash
 # fully via flags
-projinit --name myproject --lang python --description "my new project"
+projinit --name myproject --lang python --description "my new project" --license mit
 
 # omit flags to be prompted interactively
 projinit
@@ -49,13 +51,32 @@ Options:
 | `--description`, `-d` | Short description embedded in the README |
 | `--dir` | Target directory (default: `./<name>`) |
 | `--git` / `--no-git` | Run `git init` (default: on) |
+| `--run-init-command` / `--no-run-init-command` | Run the language's init command, e.g. venv creation or `npm init` (default: on) |
+| `--license`, `-L` | License key: `mit`, `apache-2.0`. Omitted → no `LICENSE` file |
+| `--author`, `-a` | Copyright holder for the `LICENSE` file (default: `git config user.name`, else `Unknown`) |
 
 Existing files are never overwritten — `projinit` reports them as skipped.
+If a language's init command fails or the tool isn't installed (e.g. `npm`
+missing), it's reported as a warning and the rest of the scaffolding still
+runs.
 
 ### Adding a new language
 
 Edit `src/devtoolbox/projinit/templates/languages.yaml` and add a
-`templates/gitignore/<key>.gitignore` file. No code changes required.
+`templates/gitignore/<key>.gitignore` file. Each language entry supports:
+
+- `display_name`, `gitignore` — required
+- `init_command` — optional list of argv to run in the new project directory
+- `extra_files` — optional list of `{path, content}` (content is a Jinja2
+  template rendered with `project_name` and `description`)
+
+No code changes required.
+
+### Adding a new license
+
+Add a Jinja2 template at `templates/license/<Name>.txt` (rendered with `year`
+and `author`) and register it in the `LICENSES` dict in
+`src/devtoolbox/projinit/config.py`.
 
 ## `snip`
 
@@ -68,9 +89,17 @@ snip add my-snippet --tags python,util
 # save from stdin instead of the clipboard
 cat script.py | snip add my-snippet --tags python
 
-# list snippets (optionally filtered by tag)
+# edit an existing snippet in $EDITOR (or $VISUAL)
+snip edit my-snippet
+snip edit my-snippet --tags new,tags        # also replace its tags
+
+# list snippets, optionally filtered by tag (repeat --tag to require all of them)
 snip list
 snip list --tag python
+snip list --tag python --tag util
+
+# list all tags in use, with counts
+snip tags
 
 # show a snippet, optionally copying it to the clipboard
 snip get my-snippet
@@ -81,7 +110,32 @@ snip search keyword
 
 # delete a snippet
 snip rm my-snippet
+
+# back up / restore snippets as JSON
+snip export --output backup.json
+snip import backup.json                     # skips names that already exist
+snip import backup.json --overwrite          # ...unless --overwrite is given
 ```
+
+## Config
+
+Both tools read optional defaults from `~/.devtools/config.yaml`
+(the directory can be relocated via the `DEVTOOLBOX_HOME` env var, mainly
+used by the test suite):
+
+```yaml
+projinit:
+  default_lang: python
+  default_license: mit
+  default_author: Your Name
+
+snip:
+  default_tags: [inbox]
+```
+
+- `projinit.default_lang` / `default_license` / `default_author` are used
+  whenever the matching flag is omitted.
+- `snip.default_tags` are merged into every `snip add` call automatically.
 
 ## Development
 
