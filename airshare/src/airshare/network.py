@@ -30,3 +30,13 @@ def is_private_address(host: str) -> bool:
     except ValueError:
         return False
     return addr.is_loopback or addr.is_private
+
+
+def is_port_free(host: str, port: int) -> bool:
+    """Whether `port` can currently be bound on `host` (no other process holding it)."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind((host, port))
+    except OSError:
+        return False
+    return True
