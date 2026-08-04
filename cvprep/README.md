@@ -63,6 +63,32 @@ cvprep run edge_prep photo.jpg --show         # also open a preview window
 
 cvprep batch edge_prep ./images/              # -> ./images/cvprep_out/
 cvprep batch edge_prep ./images/ -d ./out/ -p "*.jpg,*.png"
+
+cvprep export edge_prep                       # print the pipeline as a standalone .py script
+cvprep export edge_prep --output pipeline.py  # write it to a file instead
+cvprep export edge_prep --copy                # copy it to the clipboard instead
+cvprep export edge_prep -o pipeline.py --input-path photo.jpg --output-path out.jpg
+```
+
+`export` turns a preset's steps into a runnable script that calls the same
+`cvprep.ops` functions in the same order, e.g. for `edge_prep`:
+
+```python
+import cv2
+from cvprep import ops
+
+
+def process(image):
+    image = ops.grayscale(image)
+    image = ops.blur(image, ksize=5)
+    image = ops.canny_edge(image, threshold1=50, threshold2=150)
+    return image
+
+
+if __name__ == "__main__":
+    image = cv2.imread('input.jpg')
+    result = process(image)
+    cv2.imwrite('output.jpg', result)
 ```
 
 Image codecs can't store arbitrary float ranges, so when an op (like

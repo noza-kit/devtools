@@ -117,6 +117,41 @@ def test_batch_no_matches_reports_and_exits_cleanly(cvprep_home, tmp_path):
     assert "No matching images found" in result.output
 
 
+def test_export_prints_to_stdout_by_default(cvprep_home):
+    _write_presets(cvprep_home)
+    result = runner.invoke(app, ["export", "gray"])
+    assert result.exit_code == 0, result.output
+    assert "ops.grayscale(image)" in result.output
+
+
+def test_export_writes_to_file(cvprep_home, tmp_path):
+    _write_presets(cvprep_home)
+    out_path = tmp_path / "gray_pipeline.py"
+
+    result = runner.invoke(app, ["export", "gray", "--output", str(out_path)])
+    assert result.exit_code == 0, result.output
+    assert out_path.exists()
+    assert "ops.grayscale(image)" in out_path.read_text(encoding="utf-8")
+
+
+def test_export_copies_to_clipboard(cvprep_home, monkeypatch):
+    _write_presets(cvprep_home)
+    copied = {}
+    monkeypatch.setattr(
+        "cvprep.clipboard.pyperclip.copy", lambda text: copied.setdefault("text", text)
+    )
+
+    result = runner.invoke(app, ["export", "gray", "--copy"])
+    assert result.exit_code == 0, result.output
+    assert "ops.grayscale(image)" in copied["text"]
+
+
+def test_export_unknown_preset_fails(cvprep_home):
+    result = runner.invoke(app, ["export", "ghost"])
+    assert result.exit_code == 1
+    assert "not found" in result.output
+
+
 def test_batch_not_a_directory_fails(cvprep_home, tmp_path, sample_image):
     input_path = tmp_path / "input.png"
     _write_image(input_path, sample_image)

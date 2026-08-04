@@ -6,6 +6,8 @@ from typing import Optional
 import typer
 import yaml
 
+from cvprep.clipboard import ClipboardUnavailableError, write_clipboard
+from cvprep.codegen import generate_script
 from cvprep.io import ImageReadError, load_image, save_image
 from cvprep.pipeline import Pipeline, UnknownOpError
 from cvprep.presets import (
@@ -120,6 +122,48 @@ def show(preset: str = typer.Argument(..., help="Preset name")) -> None:
         raise typer.Exit(code=1)
 
     typer.echo(yaml.safe_dump(steps, sort_keys=False))
+
+
+@app.command()
+def export(
+    preset: str = typer.Argument(..., help="Preset name"),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o", help="Write the generated script to this file"
+    ),
+    copy: bool = typer.Option(False, "--copy", "-c", help="Copy the generated script to the clipboard"),
+    input_path: str = typer.Option(
+        "input.jpg", "--input-path", help="Path baked into the generated script's cv2.imread() call"
+    ),
+    output_path: str = typer.Option(
+        "output.jpg", "--output-path", help="Path baked into the generated script's cv2.imwrite() call"
+    ),
+) -> None:
+    """Render a preset's pipeline as a standalone Python script.
+
+    With neither --output nor --copy, the script is printed to stdout.
+    """
+    try:
+        steps = get_preset(preset)
+        script = generate_script(steps, input_path=input_path, output_path=output_path)
+    except (PresetNotFoundError, UnknownOpError) as exc:
+        typer.secho(str(exc), fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    if not output and not copy:
+        typer.echo(script)
+        return
+
+    if output:
+        output.write_text(script, encoding="utf-8")
+        typer.secho(f"Wrote {output}", fg=typer.colors.GREEN)
+
+    if copy:
+        try:
+            write_clipboard(script)
+        except ClipboardUnavailableError as exc:
+            typer.secho(f"Clipboard unavailable: {exc}", fg=typer.colors.RED)
+            raise typer.Exit(code=1)
+        typer.secho("Copied to clipboard", fg=typer.colors.GREEN)
 
 
 @app.command()
