@@ -136,6 +136,12 @@ todo list --tag work                # repeat --tag to require all of them
 todo done 1
 todo undone 1
 todo rm 1
+
+# export as a Markdown checklist (writes ./TODO.md by default, includes done tasks)
+todo export
+todo export --output notes/TODO.md
+todo export --pending-only            # leave out completed tasks
+todo export --tag work                # only tasks matching every given tag
 ```
 
 ## `dotsync`

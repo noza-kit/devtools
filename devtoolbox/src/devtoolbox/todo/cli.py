@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List
 
 import typer
@@ -25,6 +26,17 @@ def _format_line(task) -> str:
     mark = "x" if task.done else " "
     tag_str = f" [{', '.join(task.tags)}]" if task.tags else ""
     return f"[{mark}] #{task.id} {task.text}{tag_str}"
+
+
+def format_markdown(tasks) -> str:
+    lines = ["# TODO", ""]
+    if not tasks:
+        lines.append("_No tasks._")
+    for task in tasks:
+        mark = "x" if task.done else " "
+        tag_str = f" `{', '.join(task.tags)}`" if task.tags else ""
+        lines.append(f"- [{mark}] {task.text}{tag_str}")
+    return "\n".join(lines) + "\n"
 
 
 @app.command()
@@ -62,6 +74,29 @@ def list_cmd(
 
     for task in tasks:
         typer.echo(_format_line(task))
+
+
+@app.command()
+def export(
+    output: Path = typer.Option(
+        Path("TODO.md"), "--output", "-o", help="Output Markdown file"
+    ),
+    tag: List[str] = typer.Option(
+        [], "--tag", "-t", help="Filter by tag (repeatable; a task must have all given tags)"
+    ),
+    pending_only: bool = typer.Option(
+        False, "--pending-only", help="Exclude completed tasks (default: include everything)"
+    ),
+) -> None:
+    """Export tasks as a Markdown checklist (TODO.md by default)."""
+    conn = get_connection(todo_db_path())
+    try:
+        tasks = list_tasks(conn, tags=tag or None, include_done=not pending_only)
+    finally:
+        conn.close()
+
+    output.write_text(format_markdown(tasks), encoding="utf-8")
+    typer.secho(f"Exported {len(tasks)} task(s) to {output}", fg=typer.colors.GREEN)
 
 
 @app.command()

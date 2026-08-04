@@ -69,3 +69,47 @@ def test_list_multi_tag_filter_requires_all_tags(devtoolbox_home):
     lines = result.output.splitlines()
     assert any(line.startswith("[ ] #1") for line in lines)
     assert not any(line.startswith("[ ] #2") for line in lines)
+
+
+def test_export_writes_markdown_checklist_including_done_by_default(devtoolbox_home, tmp_path):
+    runner.invoke(app, ["add", "buy milk", "--tags", "errand"])
+    runner.invoke(app, ["add", "write report"])
+    runner.invoke(app, ["done", "2"])
+
+    output_file = tmp_path / "TODO.md"
+    result = runner.invoke(app, ["export", "--output", str(output_file)])
+    assert result.exit_code == 0, result.output
+    assert "Exported 2 task(s)" in result.output
+
+    text = output_file.read_text(encoding="utf-8")
+    assert text.startswith("# TODO")
+    assert "- [ ] buy milk `errand`" in text
+    assert "- [x] write report" in text
+
+
+def test_export_pending_only_excludes_done_tasks(devtoolbox_home, tmp_path):
+    runner.invoke(app, ["add", "buy milk"])
+    runner.invoke(app, ["add", "write report"])
+    runner.invoke(app, ["done", "2"])
+
+    output_file = tmp_path / "TODO.md"
+    result = runner.invoke(
+        app, ["export", "--output", str(output_file), "--pending-only"]
+    )
+    assert result.exit_code == 0, result.output
+
+    text = output_file.read_text(encoding="utf-8")
+    assert "buy milk" in text
+    assert "write report" not in text
+
+
+def test_export_defaults_to_todo_md_in_cwd(devtoolbox_home, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["add", "buy milk"])
+
+    result = runner.invoke(app, ["export"])
+    assert result.exit_code == 0, result.output
+
+    default_file = tmp_path / "TODO.md"
+    assert default_file.exists()
+    assert "buy milk" in default_file.read_text(encoding="utf-8")
