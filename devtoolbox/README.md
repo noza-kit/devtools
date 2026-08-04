@@ -1,10 +1,13 @@
 # devtoolbox
 
-Personal CLI toolbox, packaged as a single pip-installable package with two
+Personal CLI toolbox, packaged as a single pip-installable package with five
 tools:
 
 - **`projinit`** — scaffold a new project (`git init`, `.gitignore`, `README.md`, `LICENSE`)
 - **`snip`** — save, search, and recall code snippets from the terminal
+- **`todo`** — a personal task list
+- **`dotsync`** — symlink dotfiles from a source repo into `$HOME`
+- **`doctor`** — dump a system/environment report (OS, CPU, memory, GPU, git, Python) for reproducibility notes
 
 ## Install
 
@@ -24,9 +27,9 @@ with pip's `subdirectory` fragment:
 pip install "git+https://github.com/noza-kit/devtools.git#subdirectory=devtoolbox"
 ```
 
-After installing, the `projinit` and `snip` commands are available directly
-on your PATH. Both support shell completion — run `projinit --install-completion`
-or `snip --install-completion` to enable it.
+After installing, the `projinit`, `snip`, `todo`, `dotsync`, and `doctor`
+commands are available directly on your PATH. All support shell completion —
+run `<command> --install-completion` to enable it.
 
 ## `projinit`
 
@@ -117,11 +120,74 @@ snip import backup.json                     # skips names that already exist
 snip import backup.json --overwrite          # ...unless --overwrite is given
 ```
 
+## `todo`
+
+A personal task list backed by SQLite at `~/.devtools/todo.db`.
+
+```bash
+todo add "write report" --tags work
+todo add "buy milk" --tags errand
+
+# pending tasks only by default; --all includes completed ones
+todo list
+todo list --all
+todo list --tag work                # repeat --tag to require all of them
+
+todo done 1
+todo undone 1
+todo rm 1
+```
+
+## `dotsync`
+
+Symlinks dotfiles from a source repo (default `~/dotfiles`, or
+`--source`/`dotsync.source_dir` in the config) into `$HOME`. Only top-level
+entries whose name starts with `.` are treated as dotfiles — this keeps repo
+housekeeping files like `README.md` out of your home directory without an
+ignore list, so a dotfiles repo just needs `.bashrc`, `.gitconfig`,
+`.config/`, etc. at its root.
+
+```bash
+dotsync link                        # symlink everything from ~/dotfiles into $HOME
+dotsync link --source ~/my-dotfiles
+dotsync link --force                # back up conflicting files to <name>.bak and replace them
+
+dotsync status                      # linked / missing / conflict per entry
+dotsync unlink                      # remove the symlinks, restoring any .bak backups
+```
+
+Existing files that aren't already the right symlink are left alone and
+reported as a conflict unless `--force` is given.
+
+> **Windows note:** creating symlinks requires Developer Mode enabled (or
+> running as Administrator). Without it, `dotsync link` will report an
+> error for each entry.
+
+## `doctor`
+
+Prints a system/environment report — handy to paste into an experiment's
+"how to reproduce this" notes (OS, Python, CPU/memory via `psutil`, GPU via
+`nvidia-smi`/OS tools, and the current git repo's branch/commit if run
+inside one).
+
+```bash
+doctor                              # human-readable report to stdout
+doctor --json                       # machine-readable JSON
+doctor --output report.txt          # write to a file instead of stdout
+doctor --pip                        # also include `pip freeze`
+doctor --no-gpu                     # skip GPU detection (it shells out to nvidia-smi/OS tools)
+```
+
+GPU detection tries `nvidia-smi` first, then falls back to a platform tool
+(PowerShell's `Get-CimInstance` on Windows, `lspci` on Linux,
+`system_profiler` on macOS). If none are available, the GPU section is
+reported empty rather than failing the command.
+
 ## Config
 
-Both tools read optional defaults from `~/.devtools/config.yaml`
-(the directory can be relocated via the `DEVTOOLBOX_HOME` env var, mainly
-used by the test suite):
+`projinit`, `snip`, and `dotsync` read optional defaults from
+`~/.devtools/config.yaml` (the directory can be relocated via the
+`DEVTOOLBOX_HOME` env var, mainly used by the test suite):
 
 ```yaml
 projinit:
@@ -131,11 +197,16 @@ projinit:
 
 snip:
   default_tags: [inbox]
+
+dotsync:
+  source_dir: ~/my-dotfiles
 ```
 
 - `projinit.default_lang` / `default_license` / `default_author` are used
   whenever the matching flag is omitted.
 - `snip.default_tags` are merged into every `snip add` call automatically.
+- `dotsync.source_dir` overrides the default `~/dotfiles` source directory
+  whenever `--source` is omitted.
 
 ## Development
 

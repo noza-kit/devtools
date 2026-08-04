@@ -20,9 +20,15 @@ class SnipConfig:
 
 
 @dataclass
+class DotsyncConfig:
+    source_dir: str | None = None
+
+
+@dataclass
 class Config:
     projinit: ProjinitConfig = field(default_factory=ProjinitConfig)
     snip: SnipConfig = field(default_factory=SnipConfig)
+    dotsync: DotsyncConfig = field(default_factory=DotsyncConfig)
 
 
 def config_path():
@@ -37,8 +43,10 @@ def load_config() -> Config:
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     projinit_raw = raw.get("projinit") or {}
     snip_raw = raw.get("snip") or {}
+    dotsync_raw = raw.get("dotsync") or {}
 
     return Config(
         projinit=ProjinitConfig(**projinit_raw),
         snip=SnipConfig(**snip_raw),
+        dotsync=DotsyncConfig(**dotsync_raw),
     )
