@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>AirShare - パスコード</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>AirShare</h1>
+</header>
+<main>
+  <section class="card">
+    <p class="hint">パスコードを入力してください</p>
+    {% if error %}<p class="error">パスコードが違います</p>{% endif %}
+    <form method="get" action="/">
+      <input type="password" name="code" inputmode="numeric" autofocus class="code-input">
+      <button type="submit" class="big-button">入室</button>
+    </form>
+  </section>
+</main>
+</body>
+</html>
