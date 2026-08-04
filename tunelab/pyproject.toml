@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tunelab"
+version = "0.1.0"
+description = "Hyperparameter tuning experiment manager built on Optuna"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "pyyaml>=6.0",
+    "optuna>=3.6",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+skopt = ["scikit-optimize>=0.10"]
+viz = ["plotly>=5.20"]
+dashboard = ["optuna-dashboard>=0.16"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+tune = "tunelab.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
