@@ -1,0 +1,52 @@
+name: ytdigest daily batch
+
+on:
+  schedule:
+    # 21:00 UTC == 06:00 JST the next day. Adjust to taste.
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ytdigest-batch
+  cancel-in-progress: false
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ytdigest/pyproject.toml
+
+      - name: Install ytdigest and its in-repo dependencies
+        run: |
+          pip install -e ./reqretry
+          pip install -e ./confload
+          pip install -e ./ytdigest
+
+      - name: Run daily batch
+        env:
+          DISCORD_WEBHOOK_NEW: ${{ secrets.DISCORD_WEBHOOK_NEW }}
+          DISCORD_WEBHOOK_ARCHIVE: ${{ secrets.DISCORD_WEBHOOK_ARCHIVE }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_NEW_CHANNEL_ID: ${{ secrets.DISCORD_NEW_CHANNEL_ID }}
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+        run: |
+          cd ytdigest
+          ytdigest run --channels channels.yaml --db data/state.db
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ytdigest/data/state.db
+          git diff --cached --quiet || git commit -m "ytdigest: update state [skip ci]"
+          git push

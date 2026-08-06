@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ytdigest"
+version = "0.1.0"
+description = "Daily YouTube/Twitch new-content digest posted to Discord, run entirely from GitHub Actions"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "reqretry",
+    "confload",
+    "typer>=0.12",
+    "feedparser>=6.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "responses>=0.24"]
+
+[project.scripts]
+ytdigest = "ytdigest.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

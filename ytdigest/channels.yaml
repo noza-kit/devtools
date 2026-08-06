@@ -1,0 +1,14 @@
+# YouTube/Twitch channels this digest watches.
+# Commit this file to the repo — ytdigest reads it on every run.
+
+youtube:
+  # channel_id is the UC... id from the channel's "About" page or channel URL,
+  # NOT the @handle. name is only used for display in Discord messages.
+  - channel_id: "UCxxxxxxxxxxxxxxxxxxxxxx"
+    name: "Example YouTube Channel"
+
+twitch:
+  # login is the Twitch username as it appears in the channel URL
+  # (twitch.tv/<login>), not the display name.
+  - login: "examplestreamer"
+    name: "Example Twitch Streamer"
