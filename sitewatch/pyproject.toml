@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sitewatch"
+version = "0.1.0"
+description = "Watch a CSS-selected element on a page for changes (for sites without RSS), notifying via notify"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "reqretry",
+    "confload",
+    "notify",
+    "typer>=0.12",
+    "rich",
+    "beautifulsoup4>=4.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "responses>=0.24"]
+
+[project.scripts]
+sitewatch = "sitewatch.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
