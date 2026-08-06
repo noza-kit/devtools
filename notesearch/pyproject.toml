@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "notesearch"
+version = "0.1.0"
+description = "Local semantic + keyword hybrid search over a notes directory, with a RAG-prompt clipboard export and an optional Gemini-backed answer mode"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.0",
+    "confload",
+    "sentence-transformers>=3.0",
+    "chromadb>=0.5",
+    "rank-bm25>=0.2",
+    "pyperclip>=1.8",
+    "watchdog>=4.0",
+    "reqretry",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "responses>=0.24"]
+
+[project.scripts]
+notesearch = "notesearch.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
