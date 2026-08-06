@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devfind"
+version = "0.1.0"
+description = "fd/fzf/ripgrep を組み合わせたファイル検索ラッパー CLI (ファイル名一致・内容一致を横断検索)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "confload",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+devfind = "devfind.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
