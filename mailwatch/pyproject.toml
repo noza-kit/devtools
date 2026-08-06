@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mailwatch"
+version = "0.1.0"
+description = "Poll Gmail for messages matching configurable rules and notify via Slack/Discord/etc. via notify"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "reqretry",
+    "notify",
+    "PyYAML>=6.0",
+    "typer>=0.12",
+    "google-auth>=2.29",
+    "google-auth-oauthlib>=1.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "responses>=0.24"]
+
+[project.scripts]
+mailwatch = "mailwatch.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

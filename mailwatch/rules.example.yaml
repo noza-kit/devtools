@@ -1,0 +1,30 @@
+# mailwatch config: `mailwatch start --config rules.yaml`
+# Copy this file, then fill in real addresses/keywords/webhooks.
+
+# Optional; overridden by `--interval`.
+poll_interval_seconds: 300
+
+gmail:
+  # Gmail search syntax, narrows what each poll cycle has to fetch/scan.
+  # https://support.google.com/mail/answer/7190
+  query: "in:inbox newer_than:1d"
+
+# Each rule: all specified conditions must match (AND). Each *_contains list
+# matches if any one keyword is found in it (OR).
+rules:
+  - name: boss-urgent
+    from: "boss@example.com"
+    subject_contains: ["至急", "請求書"]
+    channels: ["slack"]
+    save_attachments: true
+    attachment_dir: "./attachments/boss"
+
+  - name: invoices
+    body_contains: ["請求書番号", "お支払い"]
+    channels: ["discord", "slack"]
+
+# Webhook URLs/tokens for notify(). Can be omitted here and set via env vars
+# instead (SLACK_WEBHOOK_URL, DISCORD_WEBHOOK_URL, ...) -- see notify/README.md.
+notify:
+  slack_webhook_url: "https://hooks.slack.com/services/..."
+  discord_webhook_url: "https://discord.com/api/webhooks/..."
