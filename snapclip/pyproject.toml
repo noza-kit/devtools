@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snapclip"
+version = "0.1.0"
+description = "Windows screenshot + clipboard extension: stack-capture screenshots with auto Markdown/LaTeX markup, scroll stitching, full-page web capture, and FIFO clipboard history"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.0",
+    "confload",
+    "pillow>=10.0",
+    "opencv-python-headless>=4.9",
+    "numpy>=1.24",
+    "mss>=9.0",
+    "pywin32>=306; sys_platform == 'win32'",
+    "keyboard>=0.13",
+    "mouse>=0.7",
+]
+
+[project.optional-dependencies]
+web = ["playwright>=1.40"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+snapclip = "snapclip.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
