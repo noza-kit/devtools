@@ -18,10 +18,32 @@ retries) and `confload` (config loading). Install them too, in editable mode:
 pip install -e ../reqretry -e ../confload
 ```
 
-Set your DeepL API key:
+### Getting a DeepL API key
+
+1. Go to [deepl.com/pro-api](https://www.deepl.com/pro-api) and click **Sign
+   up for free** (the free tier — 500,000 characters/month — is enough for
+   this tool; a credit card is required at signup even for the free plan,
+   but you won't be charged unless you explicitly upgrade).
+2. After signing up/logging in, open the
+   [Account page](https://www.deepl.com/account/summary) → **API keys** tab.
+3. Copy the key shown there. A free-tier key always ends in `:fx`
+   (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx`); a paid Pro key has no
+   suffix — `translate_comments` picks the correct API endpoint
+   (`api-free.deepl.com` vs `api.deepl.com`) automatically based on whether
+   the key ends in `:fx`.
+
+Set it as an environment variable:
 
 ```bash
 export DEEPL_API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx  # a ":fx" suffix means a free-tier key
+```
+
+Or in a `confload` YAML/JSON file passed via `--config` (see the `--config`
+row in [Options](#options) below):
+
+```yaml
+# secrets.yaml
+deepl_api_key: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:fx
 ```
 
 ## Usage

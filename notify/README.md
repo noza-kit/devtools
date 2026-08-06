@@ -54,6 +54,49 @@ token issued for a LINE Official Account in the
 target `userId`/`groupId`/`roomId` to push to (`LINE_TO`). LINE Notify, the
 older token-only API, was discontinued in 2025.
 
+### Getting webhook URLs / tokens
+
+#### Slack
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New
+   App** → **From scratch**. Name it and pick the workspace to install it
+   into.
+2. In the app's left sidebar, open **Incoming Webhooks** and toggle
+   **Activate Incoming Webhooks** on.
+3. Click **Add New Webhook to Workspace**, pick the channel it should post
+   to, and click **Allow**.
+4. Copy the generated URL (`https://hooks.slack.com/services/...`) and set
+   it as `SLACK_WEBHOOK_URL`. Each webhook is tied to one channel — repeat
+   from step 3 (same app) to get a webhook for another channel.
+
+#### Discord
+
+1. In the target Discord server, open **Server Settings → Integrations →
+   Webhooks → New Webhook**.
+2. Name it and pick the channel it should post to.
+3. Click **Copy Webhook URL** and set it as `DISCORD_WEBHOOK_URL`.
+
+#### LINE
+
+1. Sign in to the [LINE Developers console](https://developers.line.biz/console/),
+   create a Provider (if you don't have one yet), then create a new
+   **Messaging API** channel under it, filling in the required name/category/icon.
+2. Open the channel → **Messaging API** tab → **Channel access token**
+   section → **Issue** a long-lived token. Copy it as
+   `LINE_CHANNEL_ACCESS_TOKEN`.
+3. On the same tab, scan the channel's QR code with your phone's LINE app
+   to add the Official Account as a friend — a push message fails if the
+   recipient hasn't friended it first. (Optional: disable "Auto-reply
+   messages" / "Greeting messages" in the **LINE Official Account
+   Manager** so the OA doesn't respond to your own test messages.)
+4. Find the target `userId` (or `groupId`/`roomId`) for `LINE_TO`. The
+   console doesn't display this directly — the standard way is to
+   temporarily point the channel's **Webhook URL** (Messaging API tab) at
+   an endpoint you control (e.g. a quick `ngrok`-tunneled local server),
+   send the OA a message from the account/group you want to notify, and
+   read `events[0].source.userId` (or `.groupId`/`.roomId`) from the
+   incoming webhook payload.
+
 ```python
 from confload import load_config
 from notify import notify
