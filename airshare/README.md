@@ -71,6 +71,94 @@ Writes `AirShare 起動.bat` to the Desktop. Double-clicking it runs
 `airshare start` with the given port/passcode and opens the QR code page
 in the default browser.
 
+## Watch mode (`airshare watch`)
+
+airshare's companion feature: watches the Inbox (by default, the same
+`--receive-dir` folder `airshare start` already delivers iPhone uploads
+into) and, for every newly-received file, automatically sorts it into
+the right folder, optionally runs a hook command against it, and fires
+a clickable desktop notification — so files land where you want them
+without manual sorting or manual "did anything new arrive?" checking.
+
+```bash
+airshare watch start                  # Ctrl+C to stop
+airshare watch status                 # is it running? what's arrived in the last 24h?
+airshare watch clean                  # manually run the daily stale-file cleanup
+airshare watch clean --force          # skip the confirmation prompt
+```
+
+### Config (`~/.airshare/watch.yaml`, or `--config path/to/file.yaml`)
+
+```yaml
+inbox_dir: "~/Documents/AirShare/received"   # default: airshare's own receive_dir
+debounce_seconds: 3
+
+routing:
+  pictures:
+    extensions: [".jpg", ".png", ".heic"]
+    destination: "~/Pictures/Airshare"
+  docs:
+    extensions: [".pdf", ".md"]
+    destination: "~/Documents/Airshare"
+
+hooks:
+  ".pdf": "pdfcraft compress {filepath} --replace"
+  ".md": "notesearch sync"
+
+cleanup:
+  enabled: true
+  expire_days: 7
+```
+
+Every key is optional — an unset key falls back to the default shown
+above (no config file at all is also fine). A file whose extension
+doesn't match any `routing` rule stays in `inbox_dir` untouched, rather
+than being dropped or erroring.
+
+### How it works
+
+1. **Detection**: files with a transfer-in-progress suffix
+   (`.tmp`/`.part`/`.crdownload`) are ignored entirely — they never
+   even enter tracking. Every other file-created/modified/renamed event
+   is tracked; once `debounce_seconds` have passed with **no further**
+   event for that specific file, it's considered "done writing" and
+   included in the next batch. (Windows' file-watching API doesn't
+   expose a real close-on-write signal the way Linux's inotify does, so
+   this debounce is the practical stand-in for "the final write
+   completed.")
+2. **Routing**: each settled file moves into the first `routing` rule
+   whose `extensions` match its suffix (case-insensitive), or stays put
+   if nothing matches. A name collision at the destination is resolved
+   as `name (1).ext`, `name (2).ext`, ... (same scheme as `airshare`'s
+   own upload handling).
+3. **Hooks**: if the (now-routed) file's extension has a `hooks` entry,
+   that command runs via the shell (`{filepath}` substituted with the
+   file's new path) — e.g. auto-compressing a routed PDF with
+   [`pdfcraft`](../pdfcraft), or indexing a routed Markdown note into
+   [`notesearch`](../notesearch). A failing or crashing hook is logged
+   and does not block routing/notification for this or any other file.
+4. **Notification**: one Windows toast per batch (not per file),
+   summarizing counts per destination folder (e.g. "3件のファイルを受信
+   しました: Pictures 2件, Documents 1件"). Clicking the toast opens the
+   destination folder in Explorer. This uses
+   [`winotify`](https://github.com/versa-syahptr/winotify) directly
+   rather than routing through this repo's own [`notify`](../notify)
+   package, since `notify`'s desktop channel (`plyer`-based, for
+   cross-platform portability) doesn't expose a click callback the way
+   a Windows-specific toast library does.
+5. **Cleanup**: once a day (while `watch start` keeps running), any
+   file older than `cleanup.expire_days` (by last-access time) in any
+   routing destination or the inbox itself is moved to the Recycle Bin
+   (not permanently deleted) via
+   [`send2trash`](https://github.com/arsenetar/send2trash).
+   `airshare watch clean` runs this same check on demand.
+
+`airshare watch status` shows whether a `watch start` process is
+currently running (tracked in `~/.airshare/watch_run.json`, the same
+pattern `airshare start`/`stop` already use for the main server) and
+recent batch activity from `~/.airshare/watch_log.jsonl` (default: last
+24 hours, `--hours` to adjust).
+
 ## Security
 
 This is meant for a trusted home/office Wi-Fi network, not the open
@@ -93,6 +181,17 @@ internet:
 ## Development
 
 ```bash
+pip install -e "../confload"
 pip install -e ".[dev]"
 pytest
 ```
+
+`watch_*` module tests (the `airshare watch` feature) run real
+subprocess hook commands, a real `send2trash` call, and a real
+`winotify` toast (confirmed to actually work in this development
+environment) rather than mocking them — only the debounce timing
+(injectable `now_fn`) and the real `watchdog` filesystem observer/
+`airshare watch start`'s foreground loop itself are not exercised by
+the automated suite (the former is a pure state machine tested
+directly instead; the latter needs a live filesystem + Ctrl+C to stop,
+same as this repo's other daemon-style tools).

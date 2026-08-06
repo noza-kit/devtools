@@ -19,6 +19,10 @@ from airshare.qr import render_ascii
 from airshare.runtime import RuntimeInfo, clear_runtime_info, generate_token, read_runtime_info, write_runtime_info
 from airshare.server import create_app
 from airshare.shortcut import create_desktop_shortcut
+from airshare.watch_cleanup import find_stale_files, move_to_trash
+from airshare.watch_config import load_watch_settings
+from airshare.watch_daemon import run_watch_daemon
+from airshare.watch_state import is_process_alive, read_recent_log_entries, read_watch_runtime_info
 
 if sys.platform == "win32":
     # The Windows console's codepage (e.g. cp932) can't encode the QR ASCII
@@ -28,6 +32,8 @@ if sys.platform == "win32":
             _stream.reconfigure(encoding="utf-8", errors="replace")
 
 app = typer.Typer(help="AirDrop-like local file transfer server between iPhone and PC", add_completion=True)
+watch_app = typer.Typer(help="Watch the Inbox and auto-organize/notify/clean up received files.")
+app.add_typer(watch_app, name="watch")
 
 HEALTH_TIMEOUT = 2.0
 
@@ -121,6 +127,77 @@ def setup_shortcut(
     settings = load_settings(port=port, passcode=passcode)
     shortcut_path = create_desktop_shortcut(settings)
     typer.secho(f"Created shortcut: {shortcut_path}", fg=typer.colors.GREEN)
+
+
+@watch_app.command("start")
+def watch_start(
+    config: Optional[Path] = typer.Option(None, "--config", help="watch.yaml (default: ~/.airshare/watch.yaml)"),
+    interval: float = typer.Option(1.0, "--interval", help="Seconds between checking for settled files"),
+) -> None:
+    """Watch the Inbox (default: airshare's own --receive-dir) and
+    auto-route/hook/notify for newly-received files (Ctrl+C to stop)."""
+    default_inbox = load_settings().receive_dir
+    try:
+        settings = load_watch_settings(config, default_inbox_dir=default_inbox)
+    except FileNotFoundError as e:
+        typer.secho(str(e), fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    typer.secho(f"Watching {settings.inbox_dir} (Ctrl+C で終了)", fg=typer.colors.GREEN, bold=True)
+    run_watch_daemon(settings, poll_interval=interval)
+
+
+@watch_app.command("status")
+def watch_status(hours: float = typer.Option(24.0, "--hours", help="How far back to show activity")) -> None:
+    """Show whether `watch start` is currently running, and recent (default: 24h) receive/processing activity."""
+    info = read_watch_runtime_info()
+    if info is not None and is_process_alive(info.pid):
+        typer.secho(f"稼働中 (PID {info.pid}, 開始: {info.started_at})", fg=typer.colors.GREEN)
+    else:
+        typer.secho("停止中", fg=typer.colors.YELLOW)
+
+    entries = read_recent_log_entries(within_hours=hours)
+    if not entries:
+        typer.echo(f"過去{hours:g}時間の受信履歴はありません。")
+        return
+
+    typer.echo(f"過去{hours:g}時間の受信履歴:")
+    for entry in entries:
+        typer.echo(f"  [{entry['timestamp']}] {entry['message']}")
+
+
+@watch_app.command("clean")
+def watch_clean(
+    config: Optional[Path] = typer.Option(None, "--config"),
+    force: bool = typer.Option(False, "--force", help="Skip the confirmation prompt"),
+) -> None:
+    """Manually run the same stale-file-to-recycle-bin cleanup `watch start` performs daily."""
+    default_inbox = load_settings().receive_dir
+    try:
+        settings = load_watch_settings(config, default_inbox_dir=default_inbox)
+    except FileNotFoundError as e:
+        typer.secho(str(e), fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    if not settings.cleanup.enabled:
+        typer.secho("cleanup は設定で無効化されています(cleanup.enabled: false)。", fg=typer.colors.YELLOW)
+        raise typer.Exit(code=0)
+
+    directories = [rule.destination for rule in settings.routing] + [settings.inbox_dir]
+    stale = find_stale_files(directories, settings.cleanup.expire_days)
+    if not stale:
+        typer.echo("削除対象のファイルはありません。")
+        return
+
+    typer.echo(f"{len(stale)}件のファイルがゴミ箱へ移動されます:")
+    for path in stale:
+        typer.echo(f"  {path}")
+    if not force and not typer.confirm("続行しますか?"):
+        raise typer.Exit(code=0)
+
+    for path in stale:
+        move_to_trash(path)
+    typer.secho(f"{len(stale)}件をゴミ箱へ移動しました。", fg=typer.colors.GREEN)
 
 
 def _is_alive(info: RuntimeInfo) -> bool:

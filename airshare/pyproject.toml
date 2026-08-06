@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "airshare"
 version = "0.1.0"
-description = "AirDrop-like local web server for sending files between iPhone and PC over the same Wi-Fi network"
+description = "AirDrop-like local web server for sending files between iPhone and PC over the same Wi-Fi network, with an optional Inbox-watching auto-organize/notify daemon"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +17,10 @@ dependencies = [
     "pillow>=10.0",
     "typer>=0.12",
     "requests>=2.31",
+    "confload",
+    "watchdog>=4.0",
+    "winotify>=1.1; sys_platform == 'win32'",
+    "send2trash>=1.8",
 ]
 
 [project.optional-dependencies]
