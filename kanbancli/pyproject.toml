@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kanbancli"
+version = "0.1.0"
+description = "Offline, Markdown-file-backed kanban/task CLI: priorities, due dates, recurrence, dependencies, subtasks, and notify-based due reminders"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13.0",
+    "notify",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+kanbancli = "kanbancli.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

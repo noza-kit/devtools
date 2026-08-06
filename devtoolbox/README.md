@@ -124,6 +124,13 @@ snip import backup.json --overwrite          # ...unless --overwrite is given
 
 ## `todo`
 
+> **Superseded by [`kanbancli`](../kanbancli)**, which covers everything
+> here plus priorities, due dates, recurrence, dependencies, subtasks,
+> and due-date reminders (via `notify`), backed by a plain Markdown file
+> instead of SQLite. `todo` is kept as-is for backward compatibility —
+> nothing here is deprecated/removed, just no longer the recommended
+> tool for new use.
+
 A personal task list backed by SQLite at `~/.devtools/todo.db`.
 
 ```bash
