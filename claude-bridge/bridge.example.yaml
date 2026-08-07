@@ -1,0 +1,26 @@
+# claude-bridge configuration -- copy to bridge.yaml and edit.
+# Any key here can be overridden by a CLAUDE_BRIDGE_<KEY> env var
+# (e.g. CLAUDE_BRIDGE_TIMEOUT_SECONDS=900, CLAUDE_BRIDGE_HEARTBEAT__ENABLED=true).
+
+projects:
+  - alias: hobby
+    path: "C:/Users/AlexD/Documents/hobby"
+  - alias: myapp
+    path: "C:/Users/AlexD/Documents/myapp"
+
+# Used when a message doesn't include a `project: <alias>` line.
+default_project: hobby
+
+# diff (default): post the git diff of what changed.
+# summary: post only a text description of what changed, no diff.
+default_mode: diff
+
+# How long a single `claude -p` run may run before it's force-killed.
+timeout_seconds: 1800
+
+# Minimum seconds between "作業中: ..." progress messages.
+progress_interval_seconds: 20
+
+heartbeat:
+  enabled: false
+  interval_seconds: 3600
