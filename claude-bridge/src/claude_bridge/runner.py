@@ -5,6 +5,7 @@ import contextlib
 import json
 import logging
 import os
+import shutil
 import signal
 import subprocess as _subprocess
 import time
@@ -31,6 +32,11 @@ class RunResult:
     ok: bool
     session_id: str
     final_text: str
+    total_cost_usd: Optional[float] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cache_creation_input_tokens: Optional[int] = None
+    cache_read_input_tokens: Optional[int] = None
     raw_events: list[dict] = field(default_factory=list)
 
 
@@ -83,15 +89,21 @@ async def run_claude(
     on_progress: Optional[ProgressCallback] = None,
     progress_interval_seconds: float = 20.0,
     cancel_event: Optional[asyncio.Event] = None,
-    claude_command: Sequence[str] = ("claude",),
+    claude_command: Optional[Sequence[str]] = None,
 ) -> RunResult:
     """Run `claude -p <instruction>` headlessly in `project_path`, streaming
     tool-use progress to `on_progress` (rate-limited to
     `progress_interval_seconds`), and returning the final result.
 
-    `claude_command` is the argv prefix to run (default `("claude",)`);
-    tests point it at a fake stdin-free stand-in (e.g.
-    `(sys.executable, "fake_claude.py")`) instead of a real `claude` binary.
+    `claude_command` is the argv prefix to run; tests point it at a fake
+    stand-in (e.g. `(sys.executable, "fake_claude.py")`) instead of a real
+    `claude` binary. Left as None (the default), it's resolved via
+    `shutil.which("claude")` rather than passed to CreateProcess as the bare
+    string "claude": on Windows, a npm-installed CLI is actually
+    `claude.cmd`, and passing an extension-less name skips PATHEXT-style
+    resolution entirely -- CreateProcess only auto-appends ".exe", so it
+    fails with WinError 2 ("file not found") despite `claude` working fine
+    when typed into a terminal.
 
     Raises RunTimeout past `timeout_seconds`, or RunCancelled if
     `cancel_event` is set first -- either way the whole process tree is
@@ -104,6 +116,9 @@ async def run_claude(
     keyword guard (guard.py) plus the channel/user/project whitelists are
     the compensating controls -- see the README's Security section.
     """
+    if claude_command is None:
+        claude_command = (shutil.which("claude") or "claude",)
+
     new_session_id = session_id or str(uuid.uuid4())
     args = [
         *claude_command, "-p", instruction,
@@ -131,7 +146,17 @@ async def run_claude(
     )
 
     raw_events: list[dict] = []
-    state = {"final_text": "", "session_id": new_session_id, "ok": False, "last_progress_at": 0.0}
+    state = {
+        "final_text": "",
+        "session_id": new_session_id,
+        "ok": False,
+        "last_progress_at": 0.0,
+        "total_cost_usd": None,
+        "input_tokens": None,
+        "output_tokens": None,
+        "cache_creation_input_tokens": None,
+        "cache_read_input_tokens": None,
+    }
 
     async def read_stdout() -> None:
         assert process.stdout is not None
@@ -152,6 +177,12 @@ async def run_claude(
             if event.get("type") == "result":
                 state["final_text"] = event.get("result", "") or ""
                 state["ok"] = not event.get("is_error", False)
+                state["total_cost_usd"] = event.get("total_cost_usd")
+                usage = event.get("usage") or {}
+                state["input_tokens"] = usage.get("input_tokens")
+                state["output_tokens"] = usage.get("output_tokens")
+                state["cache_creation_input_tokens"] = usage.get("cache_creation_input_tokens")
+                state["cache_read_input_tokens"] = usage.get("cache_read_input_tokens")
                 continue
 
             if event.get("type") == "assistant" and on_progress is not None:
@@ -198,5 +229,13 @@ async def run_claude(
     await process.wait()
 
     return RunResult(
-        ok=state["ok"], session_id=state["session_id"], final_text=state["final_text"], raw_events=raw_events
+        ok=state["ok"],
+        session_id=state["session_id"],
+        final_text=state["final_text"],
+        total_cost_usd=state["total_cost_usd"],
+        input_tokens=state["input_tokens"],
+        output_tokens=state["output_tokens"],
+        cache_creation_input_tokens=state["cache_creation_input_tokens"],
+        cache_read_input_tokens=state["cache_read_input_tokens"],
+        raw_events=raw_events,
     )

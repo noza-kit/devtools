@@ -18,6 +18,7 @@ class RuntimeState:
     started_at: str
     current: Optional[str]  # human-readable description of the running task, or None if idle
     queue_length: int
+    paused: bool = False
 
 
 def write_runtime_state(state: RuntimeState, path: Optional[Path] = None) -> None:

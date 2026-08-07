@@ -33,6 +33,7 @@ class BridgeClient(discord.Client):
         self.secrets = secrets
         self.history_db = history_db
         self._pending: Optional[PendingConfirmation] = None
+        self._paused = False
         self._queue = TaskQueue(self._handle_task)
         self._channel: Optional[discord.abc.Messageable] = None
         self._started_at = datetime.now(timezone.utc).isoformat()
@@ -65,14 +66,35 @@ class BridgeClient(discord.Client):
             allowed_user_ids=self.secrets.allowed_user_ids,
             pending=self._pending,
             has_running_task=self._queue.current is not None,
+            is_paused=self._paused,
         )
 
         if decision.kind == "ignore":
             return
 
+        if decision.kind == "notice":
+            await message.channel.send(decision.reply)
+            return
+
+        if decision.kind == "pause":
+            self._paused = True
+            self._pending = None
+            self._queue.cancel_current()
+            await message.channel.send(decision.reply)
+            return
+
+        if decision.kind == "resume":
+            self._paused = False
+            await message.channel.send(decision.reply)
+            return
+
         if decision.kind == "cancel":
             self._queue.cancel_current()
             await message.channel.send("\N{OCTAGONAL SIGN} 実行中のタスクを中断します...")
+            return
+
+        if decision.kind == "usage":
+            await self._send_usage_report(message.channel)
             return
 
         if decision.kind in ("unknown_project", "confirmation_declined"):
@@ -143,12 +165,44 @@ class BridgeClient(discord.Client):
         self.history_db.set_session_id(task.project_alias, result.session_id)
         status = "completed" if result.ok else "failed"
         self.history_db.finish_run(
-            run_id, status=status, result_summary=result.final_text[:500], session_id=result.session_id
+            run_id,
+            status=status,
+            result_summary=result.final_text[:500],
+            session_id=result.session_id,
+            total_cost_usd=result.total_cost_usd,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            cache_creation_input_tokens=result.cache_creation_input_tokens,
+            cache_read_input_tokens=result.cache_read_input_tokens,
         )
 
         if result.final_text:
             await self._send_chunked(channel, result.final_text)
         await self._send_diff_or_summary(channel, task, project.path, result.final_text)
+
+        if result.total_cost_usd is not None:
+            total = self.history_db.usage_summary().total_cost_usd
+            await channel.send(
+                f"\N{MONEY BAG} 概算コスト: ${result.total_cost_usd:.4f}(累計: ${total:.4f}。"
+                "内訳は `usage` と送信)"
+            )
+
+    async def _send_usage_report(self, channel) -> None:
+        all_time = self.history_db.usage_summary()
+        recent = self.history_db.usage_summary(since_days=7)
+        by_project = self.history_db.usage_by_project()
+
+        lines = [
+            "\N{BAR CHART} 使用量(概算コスト)",
+            f"全期間: {all_time.run_count}回 / ${all_time.total_cost_usd:.4f}",
+            f"直近7日間: {recent.run_count}回 / ${recent.total_cost_usd:.4f}",
+        ]
+        if by_project:
+            lines.append("")
+            lines.append("プロジェクト別(全期間):")
+            lines.extend(f"- {p.project_alias}: {p.run_count}回 / ${p.total_cost_usd:.4f}" for p in by_project)
+
+        await channel.send("\n".join(lines))
 
     async def _send_diff_or_summary(self, channel, task: BridgeTask, project_path: Path, claude_summary: str) -> None:
         if task.mode == "summary":
@@ -179,6 +233,7 @@ class BridgeClient(discord.Client):
                     started_at=self._started_at,
                     current=f"{current.project_alias}: {current.instruction[:80]}" if current else None,
                     queue_length=self._queue.pending_count,
+                    paused=self._paused,
                 )
             )
             await asyncio.sleep(STATUS_WRITE_INTERVAL_SECONDS)

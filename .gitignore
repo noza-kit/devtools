@@ -11,3 +11,4 @@ venv/
 .ruff_cache/
 *.db
 !ytdigest/data/state.db
+env.txt

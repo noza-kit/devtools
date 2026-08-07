@@ -30,6 +30,11 @@ SUCCESS_SCRIPT = textwrap.dedent(
     time.sleep(0.05)
     print(json.dumps({
         "type": "result", "session_id": session_id, "result": "Done!", "is_error": False,
+        "total_cost_usd": 0.0123,
+        "usage": {
+            "input_tokens": 100, "output_tokens": 50,
+            "cache_creation_input_tokens": 10, "cache_read_input_tokens": 5,
+        },
     }), flush=True)
     """
 )
@@ -78,6 +83,11 @@ async def test_run_claude_success_returns_final_text_and_session_id(tmp_path):
     assert result.ok is True
     assert result.final_text == "Done!"
     assert progress_labels == ["編集中: foo.py", "実行中: pytest -q"]
+    assert result.total_cost_usd == 0.0123
+    assert result.input_tokens == 100
+    assert result.output_tokens == 50
+    assert result.cache_creation_input_tokens == 10
+    assert result.cache_read_input_tokens == 5
 
 
 @pytest.mark.asyncio

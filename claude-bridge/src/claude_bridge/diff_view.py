@@ -27,6 +27,8 @@ def capture_diff(project_path: Path) -> str:
             cwd=project_path,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=30,
             check=False,
         )
@@ -43,6 +45,8 @@ def changed_files(project_path: Path) -> list[str]:
         cwd=project_path,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=30,
         check=False,
     )

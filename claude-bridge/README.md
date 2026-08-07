@@ -12,6 +12,8 @@ Discord経由でClaude Codeを遠隔操作する常駐Bot。指定チャンネ�
   リスト化(`bridge.yaml`)・実行タイムアウト・破壊的操作の事前確認
   (`yes` 返信待ち)による安全策
 - `stop` 返信での実行中タスクの中断、複数指示のキュー処理(同時実行なし)
+- `終了`/`起動` 返信での指示受け付けの一時停止/再開(プロセス自体は常駐した
+  まま。詳細は下記「Discordからの起動/終了について」)
 - プロジェクトごとのセッション継続(`claude -p --resume`)で文脈を維持した
   追加指示
 - 長時間タスクの途中経過通知(編集中/実行中のツール呼び出しをstream-json
@@ -20,7 +22,10 @@ Discord経由でClaude Codeを遠隔操作する常駐Bot。指定チャンネ�
   またはconfigのデフォルト値)
 - `claude-bridge status`/`ping` での稼働状況確認・ヘルスチェック、任意の
   定期ハートビート投稿
-- 指示・結果・使用モードなどの実行履歴をSQLiteに記録
+- `usage`(または `使用量`/`cost`/`コスト`)返信、または `claude-bridge usage`
+  での概算コスト・トークン使用量の確認(全期間/直近7日間/プロジェクト別)。
+  各実行完了時にも概算コストを自動投稿
+- 指示・結果・使用モード・概算コスト/トークン数などの実行履歴をSQLiteに記録
 
 ## 使い方
 
@@ -36,6 +41,22 @@ READMEにインストール手順を追記して
 `default_project`/`default_mode` が使われる)。破壊的操作と判定された指示は
 実行前に確認を求められるので、`yes` と返信する。実行中に `stop` と返信する
 と中断できる。
+
+## Discordからの起動/終了について
+
+`終了`(または `shutdown`/`exit`)と送信すると、実行中のタスクを中断した上で
+指示の受け付けを停止する。`起動`(または `start`/`resume`)で再開する。
+
+**これはOSプロセス自体のkill/起動ではない**: claude-bridgeのプロセスが
+完全に落ちている間はDiscordのメッセージを受け取る仕組み自体が存在しない
+(Botが起動していない = 「起動して」というメッセージすら受け取れない、と
+いう鶏と卵の問題があるため)。そのため実体は「指示の受け付けON/OFF」の
+切り替えで、Botプロセス自体は常時起動させておく設計になっている
+(`claude-bridge start` をWindowsのタスクスケジューラ等でPCログオン時に
+自動起動しておくことを推奨)。待機中(一時停止中含む)のプロセスは
+Discordとの接続を保持しているだけで、メモリ使用量はごく小さい
+(`claude -p` を実際に実行している間だけ別途プロセスが立ち上がり、完了後
+は終了する)。
 
 ## セットアップ
 
@@ -75,8 +96,13 @@ timeout_seconds: 1800
 
 ### 3. インストール・起動
 
+`claude-bridge` ディレクトリに `cd` してから実行する(`-e .` はカレント
+ディレクトリをインストール対象にするため、リポジトリのルートで実行すると
+"does not appear to be a Python project" エラーになる):
+
 ```bash
-pip install -e ./reqretry -e ./confload -e ./notify -e .
+cd claude-bridge
+pip install -e ../reqretry -e ../confload -e ../notify -e .
 
 export CLAUDE_BRIDGE_BOT_TOKEN=...
 export CLAUDE_BRIDGE_CHANNEL_ID=...
@@ -138,19 +164,28 @@ claude-bridge status   # 実行中/待機中、キュー件数
 `--output-format stream-json --verbose` の出力を1行ずつパースし、
 `tool_use` イベント(Edit/Write/Bash等)から「編集中: foo.py」のような
 ラベルを組み立てて表示している(`progress_interval_seconds` で頻度を制限)。
+最後の `result` イベントに含まれる `total_cost_usd`/`usage`(トークン数)を
+拾って `usage` コマンドの集計に使っている。
 
-これらのCLIフラグは手元で確認したClaude Codeの動作に基づくもので、
-`claude --help` で最新のフラグ名を確認してから使うこと。バージョンにより
-フラグ名が変わる可能性がある。
+これらのCLIフラグ・出力フィールドは手元で確認したClaude Codeの動作に基づく
+もので、`claude --help` で最新のフラグ名を確認してから使うこと。バージョン
+により変わる可能性がある(`total_cost_usd`/`usage` を含まないバージョンでは
+コストは `null` のまま記録され、`usage` コマンドの合計には含まれない)。
 
 ## データベース
 
 `--db`(既定 `~/.claude-bridge/history.db`)にSQLiteで記録:
 
 - **runs** — 指示・使用モード・ステータス(running/completed/failed/
-  timeout/cancelled)・結果概要・使用セッションID
+  timeout/cancelled)・結果概要・使用セッションID・概算コスト
+  (`total_cost_usd`)・トークン数(`input_tokens`/`output_tokens`/
+  `cache_creation_input_tokens`/`cache_read_input_tokens`)
 - **sessions** — プロジェクトエイリアスごとの直近のClaudeセッションID
   (次回の `--resume` に使用)
+
+コスト/トークン列は初回リリース後に追加されたもので、既存の
+`history.db` に対しては起動時に自動でマイグレーション(`ALTER TABLE`)
+される。
 
 ## 動作確認について
 

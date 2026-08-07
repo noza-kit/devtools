@@ -66,14 +66,17 @@ def start(
 
 @app.command()
 def status() -> None:
-    """稼働状況(実行中/待機中/キュー件数)を表示する。"""
+    """稼働状況(実行中/待機中/一時停止中/キュー件数)を表示する。"""
     info = read_runtime_state()
     if info is None or not is_process_alive(info.pid):
-        typer.secho("停止中", fg=typer.colors.YELLOW)
+        typer.secho("停止中(プロセスなし)", fg=typer.colors.YELLOW)
         raise typer.Exit(code=0)
 
-    typer.secho(f"稼働中 (PID {info.pid}, 開始: {info.started_at})", fg=typer.colors.GREEN)
-    typer.echo(f"実行中: {info.current}" if info.current else "待機中")
+    typer.secho(f"起動中 (PID {info.pid}, 開始: {info.started_at})", fg=typer.colors.GREEN)
+    if info.paused:
+        typer.secho("状態: 一時停止中(Discordで `起動` と送信すると再開)", fg=typer.colors.YELLOW)
+    else:
+        typer.echo(f"実行中: {info.current}" if info.current else "待機中")
     typer.echo(f"キュー: {info.queue_length}件")
 
 
@@ -95,6 +98,25 @@ def ping() -> None:
         raise typer.Exit(code=1)
 
     typer.secho("ping を送信しました。", fg=typer.colors.GREEN)
+
+
+@app.command()
+def usage(
+    db: Path = typer.Option(DEFAULT_DB_PATH, "--db", help="履歴/セッションSQLiteファイル"),
+) -> None:
+    """Claude Code の使用量(実行回数・概算コスト)を表示する。"""
+    with HistoryDB(db) as history_db:
+        all_time = history_db.usage_summary()
+        recent = history_db.usage_summary(since_days=7)
+        by_project = history_db.usage_by_project()
+
+    typer.echo(f"全期間: {all_time.run_count}回 / ${all_time.total_cost_usd:.4f}")
+    typer.echo(f"直近7日間: {recent.run_count}回 / ${recent.total_cost_usd:.4f}")
+    if by_project:
+        typer.echo("")
+        typer.echo("プロジェクト別(全期間):")
+        for p in by_project:
+            typer.echo(f"  {p.project_alias}: {p.run_count}回 / ${p.total_cost_usd:.4f}")
 
 
 if __name__ == "__main__":
