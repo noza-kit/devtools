@@ -30,6 +30,14 @@ def project_with_requirements(tmp_path):
 
 
 @pytest.fixture
+def projarchive_home(monkeypatch, tmp_path):
+    """Redirect the compressed-projects metadata DB away from the real ~/.devtools."""
+    home = tmp_path / "projarchive_home"
+    monkeypatch.setenv("PROJARCHIVE_HOME", str(home))
+    return home
+
+
+@pytest.fixture
 def archived_project(tmp_path):
     """A project dir with requirements.txt and an .archived marker, no venv."""
     proj = tmp_path / "myproject"
