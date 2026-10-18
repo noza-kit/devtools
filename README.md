@@ -22,16 +22,6 @@ one subdirectory per project, each with its own `pyproject.toml`, tests and READ
 | [snapclip](snapclip/) | スクショのスタック撮影・スクロールキャプチャ（テンプレートマッチングで結合）・クリップボード履歴キュー | OpenCV, mss, pywin32 |
 | [pdfcraft](pdfcraft/) | 分割・結合・圧縮・墨消し・OCR・Markdown 抽出までローカル完結の PDF ツールキット | PyMuPDF, EasyOCR |
 
-## 開発の進め方 / How these were built
-
-多くのプロジェクトは **Claude Code（AI コーディングエージェント）と協働** して開発しています。
-
-1. 自分で要件・設計を仕様書にまとめる（[`docs/specs/*_detail.md`](docs/specs/)）
-2. Claude Code が実装し、設計判断・未検証部分をレポートにまとめる（[`docs/specs/*_report.md`](docs/specs/)）
-3. レポートとコードをレビューし、実機で動作確認・修正する
-
-実機（カメラ、Unity Editor など）がない環境で検証できなかった部分は、各 README に「未検証」と明記しています。
-今後のアイデアは [`docs/roadmap.txt`](docs/roadmap.txt) にあります。
 
 ## プロジェクト一覧 / Projects
 
