@@ -85,7 +85,7 @@ Discordとの接続を保持しているだけで、メモリ使用量はごく�
 ```yaml
 projects:
   - alias: hobby
-    path: "C:/Users/AlexD/Documents/hobby"
+    path: "C:/Users/you/Documents/hobby"
 default_project: hobby
 default_mode: diff
 timeout_seconds: 1800

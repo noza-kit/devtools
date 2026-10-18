@@ -12,3 +12,16 @@ venv/
 *.db
 !ytdigest/data/state.db
 env.txt
+
+# Local configs with real tokens/IDs (commit the *.example.yaml instead)
+claude-bridge/bridge.yaml
+
+# Local scratch notes and machine-specific reports (not part of any project)
+/PURPOSE.txt
+/answers.txt
+/report*.txt
+diskcheck/additional_function.txt
+
+# slidecraft: generated decks and personal input decks/templates
+slidecraft/*.pptx
+slidecraft/presentation.html

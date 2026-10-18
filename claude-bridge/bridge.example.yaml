@@ -4,9 +4,9 @@
 
 projects:
   - alias: hobby
-    path: "C:/Users/AlexD/Documents/hobby"
+    path: "C:/Users/you/Documents/hobby"
   - alias: myapp
-    path: "C:/Users/AlexD/Documents/myapp"
+    path: "C:/Users/you/Documents/myapp"
 
 # Used when a message doesn't include a `project: <alias>` line.
 default_project: hobby
